@@ -21,7 +21,7 @@ const Chatbot = () => {
         });
         if(response.ok){
           const data=await response.json();
-          const botMsg=data.answer || "Sorry, I couldn't find an answer.";
+          const botMsg=data.answer || data.greeting || "Sorry, I couldn't find an answer.";
           setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
         }
         else {
@@ -49,7 +49,7 @@ const Chatbot = () => {
         </div>
 
         {/* Chat Messages */}
-        <div className="space-y-4 overflow-y-auto max-h-64 p-2">
+        <div className="space-y-4 overflow-y-auto max-h-72 p-2">
           {messages.map((message, index) => (
             <motion.div
               key={index}
