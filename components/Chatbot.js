@@ -9,15 +9,35 @@ const Chatbot = () => {
   ]);
   const [userMessage, setUserMessage] = useState('');
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (userMessage.trim()) {
-      setMessages([...messages, { text: userMessage, sender: 'user' }]);
-      setUserMessage('');
-      // Simulate a bot response
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { text: "Let me convert that for you!", sender: 'bot' }]);
-      }, 1000);
-    }
+      setMessages([...messages, { text: userMessage, sender: "user" }]);
+      setUserMessage("");
+      try {
+        const response=await fetch("https://didactic-adventure-46v6r6qwqr635p-5000.app.github.dev/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: userMessage }),
+        });
+        if(response.ok){
+          const data=await response.json();
+          const botMsg=data.answer || "Sorry, I couldn't find an answer.";
+          setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
+        }
+        else {
+          setMessages((prev) => [
+            ...prev,
+            { text: "Error: Unable to connect to the server.", sender: "bot" },
+          ]);
+        }
+      }catch (error) {
+          console.error("Error fetching data:", error);
+          setMessages((prev) => [
+            ...prev,
+            { text: "An error occurred. Please try again.", sender: "bot" },
+          ]);
+        }
+      }
   };
 
   return (
