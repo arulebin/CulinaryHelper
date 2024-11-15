@@ -14,10 +14,11 @@ const Chatbot = () => {
       setMessages([...messages, { text: userMessage, sender: "user" }]);
       setUserMessage("");
       try {
-        const response=await fetch("https://a4b5-13-50-53-99.ngrok-free.app/convert", {
+        const response=await fetch("https://8345-13-50-53-99.ngrok-free.app/convert", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: userMessage }),
+          mode: "cors",
         });
         if(response.ok){
           const data=await response.json();
