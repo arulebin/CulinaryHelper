@@ -12,15 +12,35 @@ const Substitute = ({ messages, setMessages }) => {
       setUserMessage("");
       try {
         const response = await fetch("/api/substitute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const botMsg =
-            data.answer || data.greeting || "Sorry, I couldn't find an answer.";
-          setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: userMessage }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            let botMsg = "";
+            console.log(data); 
+
+            if (data.message) {
+              botMsg = data.message;
+            } else if (data.answer) {
+              botMsg = `${data.answer}\n`;
+            } else if (data.error) {
+              botMsg = data.error;
+            } else {
+              botMsg = "Sorry, I couldn't find an answer.";
+            }
+
+            if (Array.isArray(data.substitutes) && data.substitutes.length > 0) {
+                let substitutesText = "";
+                substitutesText += data.substitutes.map((sub, index) => `${index + 1}. ${sub}`).join("\n");
+                botMsg += substitutesText;
+              } else if (data.substitutes && data.substitutes.length === 0) {
+                botMsg += "No substitutes available.";
+              }
+            setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
+          
         } else {
           setMessages((prev) => [
             ...prev,
@@ -38,7 +58,7 @@ const Substitute = ({ messages, setMessages }) => {
   };
 
   return (
-    <div className="flex-1 bg-white p-4 rounded-lg shadow-md ml-0 md:ml-4 md:mt-2 flex flex-col">
+    <div className="flex-1 bg-white p-4 rounded-lg shadow-md ml-0 md:ml-4 mt-2 flex flex-col">
       <div className="flex items-center space-x-2 mb-4">
         <Image src="/chefhat.svg" width={24} height={24} alt="ChefHat Icon" />
         <h1 className="text-2xl font-semibold text-dark">Culinary Chatbot</h1>

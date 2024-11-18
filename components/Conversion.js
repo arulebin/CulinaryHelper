@@ -19,7 +19,7 @@ const Conversion = ({ messages, setMessages }) => {
         if (response.ok) {
           const data = await response.json();
           const botMsg =
-            data.answer || data.greeting || "Sorry, I couldn't find an answer.";
+            data.answer || data.message || data.error ||"Sorry, I couldn't find an answer.";
           setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
         } else {
           setMessages((prev) => [
