@@ -5,7 +5,7 @@ export async function POST(req) {
     const body = await req.json();
 
     // Forward the POST request to the backend API
-    const response = await fetch('https://cautious-fiesta-vwrw5wpqgw9h74-5000.app.github.dev/convert', {
+    const response = await fetch('http://13.50.53.99:5000/convert', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json', 
