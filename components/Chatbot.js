@@ -1,89 +1,121 @@
-"use client"
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 const Chatbot = () => {
+  const formatMessage = (messageText) => {
+    return messageText
+      .replace(/(\*\*([^\*]+)\*\*)/g, '<strong>$2</strong>') 
+      .replace(/(\*([^\*]+)\*)/g, '<em>$2</em>') 
+      .replace(/(\n|\r\n)/g, '<br />') 
+      .replace(/(\- (.+))/g, '<ul><li>$2</li></ul>') 
+      .replace(/(<ul>.*<\/ul>)/g, (match) => `<div class="list">${match}</div>`); 
+  };
   const [messages, setMessages] = useState([
-    { text: "Welcome! I'm here to help you with your recipes.", sender: 'bot' },
+    { text: "Welcome Chef! I'm here to help you with your recipes.", sender: "bot" },
   ]);
-  const [userMessage, setUserMessage] = useState('');
+  const [userMessage, setUserMessage] = useState("");
+
+  const textareaRef = useRef(null);
+
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(textarea.scrollHeight, 30)}px`;
+    }
+  };
 
   const handleSendMessage = async () => {
     if (userMessage.trim()) {
       setMessages([...messages, { text: userMessage, sender: "user" }]);
       setUserMessage("");
+      adjustHeight();
       try {
-        const response=await fetch("/api/convert", {
+        const response = await fetch("/api/culinary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: userMessage }),
         });
-        if(response.ok){
-          const data=await response.json();
-          const botMsg=data.answer || data.greeting || "Sorry, I couldn't find an answer.";
-          setMessages((prev) => [...prev, { text: botMsg, sender: "bot" }]);
-        }
-        else {
+
+        if (response.ok) {
+          const data = await response.json();
+          const botMsg =
+            data.message && data.message.content && data.message.content[0]
+              ? data.message.content[0].text ||
+                "Sorry, I couldn't find an answer."
+              : "Sorry, I couldn't find an answer.";
+
+            const formattedBotMsg = formatMessage(botMsg);
+          setMessages((prev) => [...prev, { text: formattedBotMsg, sender: "bot" }]);
+        } else {
           setMessages((prev) => [
             ...prev,
             { text: "Error: Unable to connect to the server.", sender: "bot" },
           ]);
         }
-      }catch (error) {
-          console.error("Error fetching data:", error);
-          setMessages((prev) => [
-            ...prev,
-            { text: "An error occurred. Please try again.", sender: "bot" },
-          ]);
-        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setMessages((prev) => [
+          ...prev,
+          { text: "An error occurred. Please try again.", sender: "bot" },
+        ]);
       }
+    }
   };
+  useEffect(() => {
+    adjustHeight();
+  }, [userMessage]); 
 
   return (
-    <div className="bg-background h-screen flex items-center justify-center p-5">
-      <div className="bg-white w-full max-w-lg p-4 rounded-lg shadow-lg relative">
-        <div className="flex items-center space-x-2 mb-4">
-            <Image src="/chefhat.svg" width={24} height={24} alt="ChefHat Icon" />
-          <h1 className="text-2xl font-semibold text-dark">Culinary Chatbot</h1>
+    <div className="bg-background h-screen flex items-center justify-center p-3 max-h-[80%]">
+      <div className="bg-white w-full max-w-2xl p-4 rounded-lg shadow-xl relative flex flex-col  md:flex h-[90%]">
+        <div className="flex items-center space-x-3 mb-3">
+          <Image src="/chefhat.svg" width={30} height={30} alt="ChefHat Icon" />
+          <h1 className="text-3xl font-semibold text-dark tracking-wide">
+            Culinary Chatbot
+          </h1>
         </div>
 
         {/* Chat Messages */}
-        <div className="space-y-4 overflow-y-auto max-h-72 p-2">
+        <div className="flex-1.5 space-y-5 overflow-y-auto h-[80%] p-4 bg-gray-50 rounded-lg shadow-inner mb-4">
           {messages.map((message, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, x: message.sender === 'user' ? 50 : -50 }}
+              initial={{ opacity: 0, x: message.sender === "user" ? 50 : -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4 }}
               className={`flex ${
-                message.sender === 'user' ? 'justify-end' : 'justify-start'
+                message.sender === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
                 className={`${
-                  message.sender === 'user' ? 'bg-primary' : 'bg-secondary'
-                } text-white p-3 rounded-lg shadow-lg max-w-xs`}
+                  message.sender === "user" ? "bg-primary" : "bg-secondary"
+                } text-white p-3 rounded-lg shadow-lg max-w-xs break-words`}
+                dangerouslySetInnerHTML={{ __html: message.text }}
               >
-                {message.text}
               </div>
             </motion.div>
           ))}
         </div>
 
         {/* Input Box */}
-        <div className="flex items-center mt-4">
-          <input
-            type="text"
-            className="w-full p-3 rounded-l-lg focus:outline-none bg-gray-100 text-dark"
-            placeholder="Ask me to convert..."
+        <div className="flex items-end mt-4 space-x-2 sm:space-x-4 w-full">
+          <textarea
+            className="w-full p-4 rounded-l-lg focus:outline-none bg-gray-100 text-dark placeholder:text-gray-500 transition-all duration-300 hover:bg-gray-200 resize-none overflow-y-auto"
+            placeholder="Message Culinary Helper"
             value={userMessage}
+            ref={textareaRef}
             onChange={(e) => setUserMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            style={{minHeight:30 , maxHeight:150 }}
+            rows={1}
           />
           <button
             onClick={handleSendMessage}
-            className="bg-primary text-white p-3 rounded-r-lg shadow-lg hover:bg-orange-600 transition-all"
+            className="bg-primary text-white p-4 rounded-r-lg shadow-lg hover:bg-orange-600 transition-all duration-300 ease-in-out transform hover:scale-105"
           >
             Send
           </button>
