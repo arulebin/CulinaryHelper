@@ -1,21 +1,28 @@
 import { NextResponse } from 'next/server';
-
-let messageHistory = [];
+import { db } from "../../firebase/config"
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export async function POST(req) {
   try {
-    const userInput = await req.json();
-    if (!userInput) {
-      return NextResponse.json(
-        { message: 'Input is required' },
-        { status: 400 }
-      );
+    const { question , sessionId } = await req.json();
+
+    const messagesRef = doc(db, 'messageHistories', sessionId);
+    
+    const docSnap = await getDoc(messagesRef);
+    let messageHistory = [];
+    
+    if (docSnap.exists()) {
+      messageHistory = docSnap.data().messages;
     }
 
     messageHistory.push({
       role: 'user',
-      content: JSON.stringify(userInput),
+      content: question,
     });
+
+    console.log(messageHistory)
+
+    await setDoc(messagesRef, { messages: messageHistory });
 
     const cohereResponse = await fetch('https://api.cohere.ai/v2/chat', {
       method: 'POST',

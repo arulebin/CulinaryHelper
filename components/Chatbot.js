@@ -2,18 +2,26 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { v4 as uuidv4 } from "uuid";
 
 const Chatbot = () => {
   const formatMessage = (messageText) => {
     return messageText
-      .replace(/(\*\*([^\*]+)\*\*)/g, '<strong>$2</strong>') 
-      .replace(/(\*([^\*]+)\*)/g, '<em>$2</em>') 
-      .replace(/(\n|\r\n)/g, '<br />') 
-      .replace(/(\- (.+))/g, '<ul><li>$2</li></ul>') 
-      .replace(/(<ul>.*<\/ul>)/g, (match) => `<div class="list">${match}</div>`); 
+      .replace(/(\*\*([^\*]+)\*\*)/g, "<strong>$2</strong>")
+      .replace(/(\*([^\*]+)\*)/g, "<em>$2</em>")
+      .replace(/(\n|\r\n)/g, "<br />")
+      .replace(/(\- (.+))/g, "<ul><li>$2</li></ul>")
+      .replace(
+        /(<ul>.*<\/ul>)/g,
+        (match) => `<div class="list">${match}</div>`
+      );
   };
+  const [sessionId, setSessionId] = useState();
   const [messages, setMessages] = useState([
-    { text: "Welcome Chef! I'm here to help you with your recipes.", sender: "bot" },
+    {
+      text: "Welcome Chef! I'm here to help you with your recipes.",
+      sender: "bot",
+    },
   ]);
   const [userMessage, setUserMessage] = useState("");
 
@@ -22,21 +30,26 @@ const Chatbot = () => {
   const adjustHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
+      textarea.style.height = "auto";
       textarea.style.height = `${Math.max(textarea.scrollHeight, 30)}px`;
     }
   };
 
   const handleSendMessage = async () => {
     if (userMessage.trim()) {
-      setMessages([...messages, { text: userMessage, sender: "user" }]);
+      const updatedMessages = [
+        ...messages,
+        { text: userMessage, sender: "user" },
+      ];
+      setMessages(updatedMessages);
       setUserMessage("");
       adjustHeight();
+      
       try {
         const response = await fetch("/api/culinary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage }),
+          body: JSON.stringify({ question: userMessage, sessionId }),
         });
 
         if (response.ok) {
@@ -47,8 +60,16 @@ const Chatbot = () => {
                 "Sorry, I couldn't find an answer."
               : "Sorry, I couldn't find an answer.";
 
-            const formattedBotMsg = formatMessage(botMsg);
-          setMessages((prev) => [...prev, { text: formattedBotMsg, sender: "bot" }]);
+          const formattedBotMsg = formatMessage(botMsg);
+          const updatedMessagesWithBot = [
+            ...updatedMessages,
+            { text: formattedBotMsg, sender: "bot" },
+          ];
+          setMessages(updatedMessagesWithBot);
+          sessionStorage.setItem(
+            "chatMessages",
+            JSON.stringify(updatedMessagesWithBot)
+          );
         } else {
           setMessages((prev) => [
             ...prev,
@@ -66,7 +87,31 @@ const Chatbot = () => {
   };
   useEffect(() => {
     adjustHeight();
-  }, [userMessage]); 
+  }, [userMessage]);
+
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem("chatMessages");
+    const savedSessionId = JSON.parse(sessionStorage.getItem("sessionId"));
+    if (savedSessionId) {
+      setSessionId(savedSessionId);
+    } else {
+      const newSessionId = uuidv4();
+      setSessionId(newSessionId);
+      sessionStorage.setItem("sessionId", JSON.stringify(newSessionId));
+    }
+
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+
+    adjustHeight();
+  }, []);
+
+  useEffect(() => {
+    if (sessionId) {
+      sessionStorage.setItem("sessionId", JSON.stringify(sessionId));
+    }
+  }, [sessionId]);
 
   return (
     <div className="bg-background h-screen flex items-center justify-center p-3 max-h-[80%]">
@@ -95,8 +140,7 @@ const Chatbot = () => {
                   message.sender === "user" ? "bg-primary" : "bg-secondary"
                 } text-white p-3 rounded-lg shadow-lg max-w-xs break-words`}
                 dangerouslySetInnerHTML={{ __html: message.text }}
-              >
-              </div>
+              ></div>
             </motion.div>
           ))}
         </div>
@@ -110,7 +154,7 @@ const Chatbot = () => {
             ref={textareaRef}
             onChange={(e) => setUserMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            style={{minHeight:30 , maxHeight:150 }}
+            style={{ minHeight: 30, maxHeight: 150 }}
             rows={1}
           />
           <button
