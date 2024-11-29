@@ -1,0 +1,16 @@
+{
+    "name": "Culinary Helper",
+    "theme_color": "#000",
+    "background_color": "#fff8e1",
+    "display": "standalone",
+    "orientation": "landscape",
+    "scope": "/",
+    "start_url": "/",
+    "icons": [
+      {
+        "src": "/chefhat.svg",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
