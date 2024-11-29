@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
+import Loader from "./Loader";
 
 const Chatbot = () => {
   const formatMessage = (messageText) => {
@@ -16,7 +17,9 @@ const Chatbot = () => {
         (match) => `<div class="list">${match}</div>`
       );
   };
+  const textareaRef = useRef(null);
   const [sessionId, setSessionId] = useState();
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([
     {
       text: "Welcome Chef! I'm here to help you with your recipes.",
@@ -25,13 +28,13 @@ const Chatbot = () => {
   ]);
   const [userMessage, setUserMessage] = useState("");
 
-  const textareaRef = useRef(null);
-
-  const adjustHeight = () => {
+  const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.max(textarea.scrollHeight, 30)}px`;
+      textarea.style.height = 'auto';
+      const maxHeight = 150;
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 56), maxHeight);
+      textarea.style.height = `${newHeight}px`;
     }
   };
 
@@ -43,8 +46,7 @@ const Chatbot = () => {
       ];
       setMessages(updatedMessages);
       setUserMessage("");
-      adjustHeight();
-      
+      setIsLoading(true);
       try {
         const response = await fetch("/api/culinary", {
           method: "POST",
@@ -82,13 +84,11 @@ const Chatbot = () => {
           ...prev,
           { text: "An error occurred. Please try again.", sender: "bot" },
         ]);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
-  useEffect(() => {
-    adjustHeight();
-  }, [userMessage]);
-
   useEffect(() => {
     const savedMessages = sessionStorage.getItem("chatMessages");
     const savedSessionId = JSON.parse(sessionStorage.getItem("sessionId"));
@@ -103,9 +103,11 @@ const Chatbot = () => {
     if (savedMessages) {
       setMessages(JSON.parse(savedMessages));
     }
-
-    adjustHeight();
   }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [userMessage]);
 
   useEffect(() => {
     if (sessionId) {
@@ -122,7 +124,6 @@ const Chatbot = () => {
             Culinary Chatbot
           </h1>
         </div>
-
         {/* Chat Messages */}
         <div className="flex-1.5 space-y-5 overflow-y-auto h-[80%] p-4 bg-gray-50 rounded-lg shadow-inner mb-4">
           {messages.map((message, index) => (
@@ -143,8 +144,19 @@ const Chatbot = () => {
               ></div>
             </motion.div>
           ))}
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, x: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="flex justify-start"
+            >
+              <div className="bg-secondary text-white p-3 rounded-lg shadow-lg max-w-xs break-words">
+                <Loader />
+              </div>
+            </motion.div>
+          )}
         </div>
-
         {/* Input Box */}
         <div className="flex items-end mt-4 space-x-2 sm:space-x-4 w-full">
           <textarea
@@ -153,13 +165,21 @@ const Chatbot = () => {
             value={userMessage}
             ref={textareaRef}
             onChange={(e) => setUserMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            style={{ minHeight: 30, maxHeight: 150 }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            style={{
+              minHeight: "56px",
+              maxHeight: "150px",
+            }}
             rows={1}
           />
           <button
             onClick={handleSendMessage}
-            className="bg-primary text-white p-4 rounded-r-lg shadow-lg hover:bg-orange-600 transition-all duration-300 ease-in-out transform hover:scale-105"
+            className="bg-primary text-white p-4 rounded-r-lg shadow-lg hover:bg-orange-600 transition-all duration-300 ease-in-out transform hover:scale-105 "
           >
             Send
           </button>

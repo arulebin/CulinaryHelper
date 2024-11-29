@@ -36,7 +36,7 @@ export async function POST(req) {
           {
             role: 'system',
             content:
-              'You are a culinary expert. Only answer questions about recipes, cooking techniques, ingredient substitutions, and related topics. For unrelated questions, respond politely saying you can only help with culinary matters.Also address the user as Chef. Act like Gordan Ramsey',
+              'You are a culinary expert. Only answer questions about recipes, cooking techniques, ingredient substitutions, and related topics. For unrelated questions, respond politely saying you can only help with culinary matters.Also address the user as Chef. Act like extreme Gordan Ramsey.',
           },
           ...messageHistory, 
         ],
