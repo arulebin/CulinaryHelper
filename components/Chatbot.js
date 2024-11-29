@@ -31,62 +31,95 @@ const Chatbot = () => {
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
+      textarea.style.height = "auto";
       const maxHeight = 150;
-      const newHeight = Math.min(Math.max(textarea.scrollHeight, 56), maxHeight);
+      const newHeight = Math.min(
+        Math.max(textarea.scrollHeight, 56),
+        maxHeight
+      );
       textarea.style.height = `${newHeight}px`;
     }
   };
-
   const handleSendMessage = async () => {
-    if (userMessage.trim()) {
-      const updatedMessages = [
-        ...messages,
-        { text: userMessage, sender: "user" },
-      ];
-      setMessages(updatedMessages);
-      setUserMessage("");
-      setIsLoading(true);
-      try {
-        const response = await fetch("/api/culinary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage, sessionId }),
-        });
+    if (!userMessage.trim()) return;
 
-        if (response.ok) {
-          const data = await response.json();
-          const botMsg =
-            data.message && data.message.content && data.message.content[0]
-              ? data.message.content[0].text ||
-                "Sorry, I couldn't find an answer."
-              : "Sorry, I couldn't find an answer.";
+    const newUserMessage = { text: userMessage, sender: "user" };
+    const updatedMessages = [...messages, newUserMessage];
 
-          const formattedBotMsg = formatMessage(botMsg);
-          const updatedMessagesWithBot = [
-            ...updatedMessages,
-            { text: formattedBotMsg, sender: "bot" },
-          ];
-          setMessages(updatedMessagesWithBot);
-          sessionStorage.setItem(
-            "chatMessages",
-            JSON.stringify(updatedMessagesWithBot)
+    setMessages(updatedMessages);
+    setUserMessage("");
+    setIsLoading(true);
+
+    // Create abort controller with a longer timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 30000); // Increased to 30 seconds
+
+    const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          console.log(`Attempt ${i + 1} failed:`, error.message);
+
+          if (error.name === "AbortError") {
+            throw new Error("Request timed out");
+          }
+
+          if (i === retries - 1) {
+            throw error;
+          }
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, delay * Math.pow(2, i))
           );
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            { text: "Error: Unable to connect to the server.", sender: "bot" },
-          ]);
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setMessages((prev) => [
-          ...prev,
-          { text: "An error occurred. Please try again.", sender: "bot" },
-        ]);
-      } finally {
-        setIsLoading(false);
       }
+    };
+
+    try {
+      const data = await fetchWithRetry("/api/culinary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: userMessage, sessionId }),
+      });
+
+      const botMsg =
+        data.message?.content?.[0]?.text || "Sorry, I couldn't find an answer.";
+      const formattedBotMsg = formatMessage(botMsg);
+
+      const updatedMessagesWithBot = [
+        ...updatedMessages,
+        { text: formattedBotMsg, sender: "bot" },
+      ];
+
+      setMessages(updatedMessagesWithBot);
+      sessionStorage.setItem(
+        "chatMessages",
+        JSON.stringify(updatedMessagesWithBot)
+      );
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error.message);
+
+      const errorMessage =
+        error.message === "Request timed out"
+          ? "The request took too long to respond. Please try again."
+          : "An error occurred. Please try again.";
+
+      setMessages((prev) => [...prev, { text: errorMessage, sender: "bot" }]);
+    } finally {
+      clearTimeout(timeoutId);
+      setIsLoading(false);
     }
   };
   useEffect(() => {
