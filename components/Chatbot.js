@@ -50,50 +50,30 @@ const Chatbot = () => {
     setUserMessage("");
     setIsLoading(true);
 
-    // Create abort controller with a longer timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 30000); // Increased to 30 seconds
-
-    const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          return await response.json();
-        } catch (error) {
-          console.log(`Attempt ${i + 1} failed:`, error.message);
-
-          if (error.name === "AbortError") {
-            throw new Error("Request timed out");
-          }
-
-          if (i === retries - 1) {
-            throw error;
-          }
-
-          await new Promise((resolve) =>
-            setTimeout(resolve, delay * Math.pow(2, i))
-          );
-        }
-      }
-    };
-
     try {
-      const data = await fetchWithRetry("/api/culinary", {
+      const saveResponse = await fetch("/api/firestore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: userMessage, sessionId }),
       });
 
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save message");
+      }
+
+      const { messageHistory } = await saveResponse.json();
+
+      const cohereResponse = await fetch("/api/culinary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageHistory }),
+      });
+
+      if (!cohereResponse.ok) {
+        throw new Error("Failed to get AI response");
+      }
+
+      const data = await cohereResponse.json();
       const botMsg =
         data.message?.content?.[0]?.text || "Sorry, I couldn't find an answer.";
       const formattedBotMsg = formatMessage(botMsg);
@@ -109,16 +89,15 @@ const Chatbot = () => {
         JSON.stringify(updatedMessagesWithBot)
       );
     } catch (error) {
-      console.error("Error in handleSendMessage:", error.message);
-
-      const errorMessage =
-        error.message === "Request timed out"
-          ? "The request took too long to respond. Please try again."
-          : "An error occurred. Please try again.";
-
-      setMessages((prev) => [...prev, { text: errorMessage, sender: "bot" }]);
+      console.error("Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: "An error occurred. Please try again.",
+          sender: "bot",
+        },
+      ]);
     } finally {
-      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
