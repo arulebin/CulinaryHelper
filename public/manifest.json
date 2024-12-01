@@ -1,15 +1,17 @@
 {
-    "name": "Culinary Helper",
-    "theme_color": "#000",
-    "background_color": "#fff8e1",
-    "display": "standalone",
-    "scope": "/",
-    "start_url": "/",
-    "icons": [
-      {
-        "src": "/chefhat.svg",
-        "sizes": "512x512",
-        "type": "image/png"
-      }
-    ]
-  }
+  "name": "Culinary Helper",
+  "short_name": "Helper",
+  "theme_color": "#000",
+  "background_color": "#fff8e1",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/chefhat.svg",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
