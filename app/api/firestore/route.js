@@ -13,17 +13,15 @@ export async function POST(req) {
     messageHistory.push({
       role: 'user',
       content: question,
-      timestamp: Timestamp.now(),
     });
-
-    // Keep only last 10 messages
-    const limitedHistory = messageHistory.slice(-10);
     
-    await setDoc(messagesRef, { messages: messageHistory });
+    await setDoc(messagesRef, { messages: messageHistory,
+      timestamp: Timestamp.now(),
+     });
     
     return NextResponse.json({ 
       success: true, 
-      messageHistory: limitedHistory 
+      messageHistory: messageHistory, 
     });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
