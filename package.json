@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@heroicons/react": "^2.1.5",
     "cohere-ai": "^7.14.0",

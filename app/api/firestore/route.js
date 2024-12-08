@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from "../../firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc,Timestamp } from "firebase/firestore";
 
 export async function POST(req) {
   try {
@@ -13,6 +13,7 @@ export async function POST(req) {
     messageHistory.push({
       role: 'user',
       content: question,
+      timestamp: Timestamp.now(),
     });
 
     // Keep only last 10 messages
